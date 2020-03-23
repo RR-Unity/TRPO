@@ -3,9 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using System.Text.RegularExpressions;
 using System.IO;
 using System.Globalization;
+using System.Diagnostics;
+using System.Xml.Serialization;
 
 namespace PractiseTask2
 {
@@ -23,6 +24,12 @@ namespace PractiseTask2
         /// <param name="x">Точка х.</param>
         /// <returns>Значение в точке х.</returns>
         public abstract double Count(double x);
+
+        /// <summary>
+        /// Сериализует объект в файл XML.
+        /// </summary>
+        /// <param name="path">Путь до файла для сериализации.</param>
+        public abstract void Serialize(string path);
     }
 
     /// <summary>
@@ -31,6 +38,8 @@ namespace PractiseTask2
     public class Single : Function
     {
         public double A;
+
+        public Single() { }
         public Single(double a)
         {
             A = a;
@@ -45,6 +54,16 @@ namespace PractiseTask2
         {
             return A;
         }
+
+        public override void Serialize(string path)
+        {
+            var s = new XmlSerializer(typeof(Single));
+            TextWriter writer = new StreamWriter(path, true);
+                
+            s.Serialize(writer, this);
+
+            writer.Close();
+        }
     }
 
     /// <summary>
@@ -58,6 +77,7 @@ namespace PractiseTask2
         public double A;
         public double B;
 
+        public Line() { }
         public Line(double a, double b)
         {
             A = a;
@@ -72,6 +92,16 @@ namespace PractiseTask2
         public override double Count(double x)
         {
             return A * x + B;
+        }
+
+        public override void Serialize(string path)
+        {
+            var s = new XmlSerializer(typeof(Line));
+            TextWriter writer = new StreamWriter(path, true);
+
+            s.Serialize(writer, this);
+
+            writer.Close();
         }
     }
 
@@ -88,6 +118,7 @@ namespace PractiseTask2
         public double B;
         public double C;
 
+        public Quadratic() { }
         public Quadratic(double a, double b, double c)
         {
             A = a;
@@ -104,6 +135,16 @@ namespace PractiseTask2
         {
             return A * x * x + B * x + C;
         }
+
+        public override void Serialize(string path)
+        {
+            var s = new XmlSerializer(typeof(Quadratic));
+            TextWriter writer = new StreamWriter(path, true);
+
+            s.Serialize(writer, this);
+
+            writer.Close();
+        }
     }
 
     /// <summary>
@@ -118,6 +159,8 @@ namespace PractiseTask2
         public double B;
         public double C;
         public double D;
+
+        public Cubic() { }
 
         public Cubic(double a, double b, double c, double d)
         {
@@ -135,6 +178,16 @@ namespace PractiseTask2
         public override double Count(double x)
         {
             return A * x * x * x + B * x * x + C * x + D;
+        }
+
+        public override void Serialize(string path)
+        {
+            var s = new XmlSerializer(typeof(Cubic));
+            TextWriter writer = new StreamWriter(path, true);
+
+            s.Serialize(writer, this);
+
+            writer.Close();
         }
 
     }
@@ -170,6 +223,8 @@ namespace PractiseTask2
         /// Список строк, которые были считаны из файла.</returns>
         public List<String> ReadFl()
         {
+            Trace.WriteLine($"Осуществляется чтение данных из {pathIn}...");
+
             using var sr = new StreamReader(@pathIn, Encoding.Default);
 
             string line = "";
@@ -185,8 +240,10 @@ namespace PractiseTask2
 
             if (result.Count == 0)
             {
-                throw new FormatException("Входной файл пуст. Вычисление невозможно");
+                throw new FormatException("Входной файл пуст. Вычисление невозможно.");
             }
+
+            Trace.WriteLine("Чтение данных завершено");
 
             return result;
         }
@@ -209,6 +266,10 @@ namespace PractiseTask2
 
     class Program
     {
+        /// <summary>
+        /// Выходной файл для сериализации в XML.
+        /// </summary>
+        private const string SerializerFilePath = "functions.xml";
 
         /// <summary> 
         /// Метод, осуществляющий перевод массива строк в массив типа double.
@@ -223,6 +284,8 @@ namespace PractiseTask2
         /// </returns>
         public static double[] ToDoubleForMas(String[] input)
         {
+            Trace.WriteLine("Осуществляется конвертация массива типа string в массив типа double.");
+
             Double[] result = new double[input.Length];/*массив для записи результата*/
 
             int i = 0;
@@ -241,6 +304,8 @@ namespace PractiseTask2
                 throw;
             }
 
+            Trace.WriteLine("Конвертация закончена.");
+
             return result;
         }
 
@@ -258,6 +323,8 @@ namespace PractiseTask2
         /// </returns>
         public static List<Double[]> Convertation(List<string> inStr)
         {
+            Trace.WriteLine("Осуществляется вычисление коэфициентов функций.");
+
             List<Double[]> result = new List<Double[]>();
 
             foreach (string str in inStr)
@@ -273,6 +340,8 @@ namespace PractiseTask2
                 result.Add(dfnc);
             }
 
+            Trace.WriteLine("Вычисление окончено.");
+
             return result;
         }
 
@@ -281,8 +350,14 @@ namespace PractiseTask2
         /// </summary>
         public static void Main(string[] args)
         {
+
+            Trace.Listeners.Add(new ConsoleTraceListener());
+
+            if (File.Exists(SerializerFilePath)) 
+                File.Delete(SerializerFilePath);
+
             double x;
-            Console.Write("Введите значение точки, в которой необходимо посчитать значения функци: ");
+            Console.Write("Введите значение точки, в которой необходимо посчитать значения функции: ");
 
             try
             {
@@ -291,8 +366,11 @@ namespace PractiseTask2
             catch (Exception ex)
             {
                 Console.WriteLine("Введено некорректное значение точки х. " + ex.Message);
+                Console.WriteLine(ex.StackTrace);
                 return;
             }
+
+            Console.WriteLine();
 
             WorkWithFile WWF = new WorkWithFile("input.txt", "output.txt");
 
@@ -304,7 +382,8 @@ namespace PractiseTask2
             }
             catch (Exception e)
             {
-                Console.WriteLine($"Ошибка во время чтения файла " + e);
+                Console.WriteLine($"Ошибка во время чтения файла " + e.Message);
+                Console.WriteLine(e.StackTrace);
                 return;
             }
 
@@ -316,7 +395,9 @@ namespace PractiseTask2
             }
             catch (Exception e)
             {
-                Console.WriteLine($"Ошибка во время конвертации значений " + e);
+                Console.WriteLine($"Ошибка во время конвертации значений " + e.Message);
+                Console.WriteLine(e.StackTrace);
+                return;
             }
 
             Function f;
@@ -330,18 +411,22 @@ namespace PractiseTask2
                     case 1:
                         f = new Single(lstOfArg[i][0]);
                         answers[i] = String.Format("значение функции y(x) = {0} в точке х = {1}", f.Count(x), x);
+                        f.Serialize(SerializerFilePath);
                         break;
                     case 2:
                         f = new Line(lstOfArg[i][0], lstOfArg[i][1]);
                         answers[i] = String.Format("Значение функции y(x) = {0} * x + {1} = {2} в точке х = {3}", lstOfArg[i][0], lstOfArg[i][1], f.Count(x), x);
+                        f.Serialize(SerializerFilePath);
                         break;
                     case 3:
                         f = new Quadratic(lstOfArg[i][0], lstOfArg[i][1], lstOfArg[i][2]);
                         answers[i] = String.Format("Значение функции y(x) = {0} * x^2 + {1} * x + {2} = {3} в точке х = {4}", lstOfArg[i][0], lstOfArg[i][1], lstOfArg[i][2], f.Count(x), x);
+                        f.Serialize(SerializerFilePath);
                         break;
                     case 4:
                         f = new Cubic(lstOfArg[i][0], lstOfArg[i][1], lstOfArg[i][2], lstOfArg[i][3]);
                         answers[i] = String.Format("Значение функции y(x) = {0} * x^3 + {1} * x^2 + {2} * x + {3} = {4} в точке х = {5}", lstOfArg[i][0], lstOfArg[i][1], lstOfArg[i][2], lstOfArg[i][3], f.Count(x), x);
+                        f.Serialize(SerializerFilePath);
                         break;
                     default:
                         answers[i] = "У функции некорректное количество аргументов ";
